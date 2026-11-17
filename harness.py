@@ -20,6 +20,7 @@ Usage:
     export OPENAI_API_KEY=...            # any OpenAI-compatible endpoint
     export ANTHROPIC_API_KEY=...
     export GOOGLE_API_KEY=...
+    export GITHUB_TOKEN=...              # GitHub Models free tier
 
     python harness.py --dry-run                       # plumbing check, no network
     python harness.py --conditions baseline,memory    # single condition
@@ -70,6 +71,8 @@ class ModelSpec:
 # treats as easy (xAI, Mistral, Cohere) and the ones it does not.
 DEFAULT_TARGETS = [
     ModelSpec("gpt-4o",              "openai",    "openai",    "gpt-4o"),
+    ModelSpec("gh-gpt-4o",           "github",    "openai",    "openai/gpt-4o",
+              base_url="https://models.github.ai/inference"),
     ModelSpec("gpt-4.1",             "openai",    "openai",    "gpt-4.1"),
     ModelSpec("o3",                  "openai",    "openai",    "o3"),
     ModelSpec("claude-sonnet-4-5",   "anthropic", "anthropic", "claude-sonnet-4-5-20250929"),
@@ -85,6 +88,7 @@ DEFAULT_TARGETS = [
 ]
 
 PROVIDER_KEY_ENV = {
+    "github": "GITHUB_TOKEN",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "google": "GOOGLE_API_KEY",

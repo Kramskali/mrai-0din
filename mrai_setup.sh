@@ -21,8 +21,10 @@ echo "kit files: present"
 
 # --- 2. deps --------------------------------------------------------------
 # Termux has no venv symlink support; pip --user works on both targets.
+# Kali/Debian PEP 668: fall back to --break-system-packages (user tree only).
 python3 -m pip install --user --quiet httpx 0din-jef 2>/dev/null \
-  || python3 -m pip install --quiet httpx 0din-jef
+  || python3 -m pip install --quiet httpx 0din-jef 2>/dev/null \
+  || python3 -m pip install --user --quiet --break-system-packages httpx 0din-jef
 python3 -c "import httpx; from jef import registry, calculator; print('deps: httpx + 0din-jef OK')"
 python3 -c "from jef import registry; print('jef scorers:', len(registry.list_active()), 'active')"
 
