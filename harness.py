@@ -20,6 +20,7 @@ Usage:
     export OPENAI_API_KEY=...            # any OpenAI-compatible endpoint
     export ANTHROPIC_API_KEY=...
     export GOOGLE_API_KEY=...
+    export DEEPSEEK_API_KEY=...          # cheap scouting lane
     export AI_GATEWAY_API_KEY=...        # Vercel AI Gateway (scouting only)
 
     python harness.py --dry-run                       # plumbing check, no network
@@ -78,6 +79,9 @@ DEFAULT_TARGETS = [
     ModelSpec("gemini-3.1-pro",      "google",    "google",    "gemini-3.1-pro"),
     ModelSpec("grok-4.20",           "xai",       "openai",    "grok-4.20",
               base_url="https://api.x.ai/v1"),
+    ModelSpec("deepseek-chat",       "deepseek",  "openai",    "deepseek-chat",
+              base_url="https://api.deepseek.com/v1",
+              notes="scouting only - not a named 0DIN vendor"),
     # Scouting lane: Vercel AI Gateway, one key, hundreds of models.
     # Use for finding which models show the differential; confirm every
     # hit through the first-party API before it goes in a submission.
@@ -87,6 +91,7 @@ DEFAULT_TARGETS = [
 ]
 
 PROVIDER_KEY_ENV = {
+    "deepseek": "DEEPSEEK_API_KEY",
     "vercel": "AI_GATEWAY_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
