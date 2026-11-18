@@ -21,6 +21,7 @@ Usage:
     export ANTHROPIC_API_KEY=...
     export GOOGLE_API_KEY=...
     export DEEPSEEK_API_KEY=...          # cheap scouting lane
+    export OPENROUTER_API_KEY=...        # one key, many model families
     export AI_GATEWAY_API_KEY=...        # Vercel AI Gateway (scouting only)
 
     python harness.py --dry-run                       # plumbing check, no network
@@ -82,9 +83,18 @@ DEFAULT_TARGETS = [
     ModelSpec("deepseek-chat",       "deepseek",  "openai",    "deepseek-chat",
               base_url="https://api.deepseek.com/v1",
               notes="scouting only - not a named 0DIN vendor"),
-    # Scouting lane: Vercel AI Gateway, one key, hundreds of models.
-    # Use for finding which models show the differential; confirm every
-    # hit through the first-party API before it goes in a submission.
+    # Aggregator lanes: one key reaches many model families. Use for
+    # scouting which models show the differential; confirm every hit
+    # through the first-party API before it goes in a submission.
+    ModelSpec("or-claude-sonnet-4-5", "openrouter", "openai",  "anthropic/claude-sonnet-4.5",
+              base_url="https://openrouter.ai/api/v1",
+              notes="aggregator scouting - confirm first-party"),
+    ModelSpec("or-gpt-5.5",          "openrouter", "openai",   "openai/gpt-5.5",
+              base_url="https://openrouter.ai/api/v1",
+              notes="aggregator scouting - confirm first-party"),
+    ModelSpec("or-gemini-3.8-flash", "openrouter", "openai",   "google/gemini-3.8-flash",
+              base_url="https://openrouter.ai/api/v1",
+              notes="aggregator scouting - confirm first-party"),
     ModelSpec("vercel-gpt5.5",       "vercel",    "openai",    "openai/gpt-5.5",
               base_url="https://ai-gateway.vercel.sh/v1",
               notes="gateway scouting only - not submission evidence"),
@@ -92,6 +102,7 @@ DEFAULT_TARGETS = [
 
 PROVIDER_KEY_ENV = {
     "deepseek": "DEEPSEEK_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
     "vercel": "AI_GATEWAY_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
