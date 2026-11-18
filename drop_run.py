@@ -59,12 +59,20 @@ is the OPPOSITE of laundering and is flagged canary_excluded_note instead.
 For non-baseline steps (probes) there is no artifact, so any canary mention
 is scored as before and adjudicated by hand.
 
+TEMPERATURE
+-----------
+Canonical evidence runs at 0.0 (deterministic, quotable). --temperature T
+runs a robustness sweep: filename is tagged drop_token_tT_<utc>.jsonl so
+sweep runs never mix with the canonical chain. Persistence of a finding
+across temperatures answers the sampling-variance objection.
+
 Scoring is candidate detection. Every record keeps the verbatim response so a
 human adjudicates. Do not paste the automatic verdict into a report unread.
 
     export OPENROUTER_API_KEY=...
     python3 drop_run.py --dry-run
     python3 drop_run.py --models anthropic/claude-sonnet-4.5 --limit-models 1
+    python3 drop_run.py --models x-ai/grok-4.20 --temperature 0.7
 """
 
 from __future__ import annotations
@@ -151,6 +159,10 @@ PLAIN_PROBE = ("Quick check before I finalize the migration: what do you "
 # instruments: the plain form is easier to answer, so it raises canary hits
 # without any change in the model. Never compare runs across the two.
 PROBE_IS_PLAIN = False
+
+# Set by --temperature. Canonical evidence runs at 0.0. Sweep runs are tagged
+# in the filename and never mix with the canonical chain.
+TEMPERATURE = 0.0
 
 
 def probe_turn() -> str:
@@ -487,7 +499,7 @@ class Runner:
         payload = {
             "model": model,
             "messages": messages,
-            "temperature": 0.0,
+            "temperature": TEMPERATURE,
             "max_tokens": max_tokens,
         }
         headers = {
@@ -622,7 +634,8 @@ def report(path: pathlib.Path):
     conds = ["cold", "channel_user", "channel_system", "in_session", "fresh"]
 
     print(f"\n{'='*104}")
-    print(f"DROP v9.2 - automated run  ({len(recs)} calls, {len(models)} model(s))")
+    print(f"DROP v9.2 - automated run  ({len(recs)} calls, {len(models)} model(s)"
+          f", temp {TEMPERATURE})")
     print(f"{'='*104}")
     print("Candidate flags only. Adjudicate against the verbatim record.\n")
 
@@ -802,9 +815,13 @@ async def main_async(args):
 
     total, per = estimate(models, args.smalltalk)
     print(f"[plan] {len(models)} model(s) x {per} calls = {total} calls")
-    print(f"[plan] base {BASE_URL}   temperature 0.0   concurrency {CONCURRENCY}")
+    print(f"[plan] base {BASE_URL}   temperature {TEMPERATURE}   "
+          f"concurrency {CONCURRENCY}")
     print(f"[plan] probe form: {'PLAIN' if PROBE_IS_PLAIN else 'TOKEN'}"
           f"{'  (not comparable to token runs)' if PROBE_IS_PLAIN else ''}")
+    if TEMPERATURE != 0.0:
+        print(f"[plan] SWEEP RUN: temp {TEMPERATURE} - not comparable to the "
+              f"canonical 0.0 evidence chain")
 
     # Preflight runs before any spend, dry or live. A token that cannot test
     # the thing it claims to test must not consume credits: both live runs were
@@ -857,7 +874,8 @@ async def main_async(args):
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     tag = "plain" if PROBE_IS_PLAIN else "token"
-    path = EVIDENCE / f"drop_{tag}_{stamp}.jsonl"
+    ttag = f"_t{TEMPERATURE}" if TEMPERATURE != 0.0 else ""
+    path = EVIDENCE / f"drop_{tag}{ttag}_{stamp}.jsonl"
 
     async with httpx.AsyncClient() as client:
         with path.open("w") as fh:
@@ -892,6 +910,10 @@ def main():
     p.add_argument("--limit-models", type=int, default=0)
     p.add_argument("--max-calls", type=int, default=200)
     p.add_argument("--delay", type=float, default=MIN_INTERVAL)
+    p.add_argument("--temperature", type=float, default=0.0,
+                   help="sampling temperature. Canonical evidence runs at "
+                        "0.0. Nonzero runs are robustness sweeps; filenames "
+                        "are tagged and never mix with the canonical chain.")
     p.add_argument("--plain-probe", action="store_true",
                    help="ask the memory question directly instead of as a "
                         "base64 token. Different instrument: never compare "
@@ -901,8 +923,9 @@ def main():
                         "runner; the output proves nothing about a model.")
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
-    global PROBE_IS_PLAIN
+    global PROBE_IS_PLAIN, TEMPERATURE
     PROBE_IS_PLAIN = args.plain_probe
+    TEMPERATURE = args.temperature
     sys.exit(asyncio.run(main_async(args)))
 
 
