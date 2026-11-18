@@ -20,11 +20,11 @@ Usage:
     export OPENAI_API_KEY=...            # any OpenAI-compatible endpoint
     export ANTHROPIC_API_KEY=...
     export GOOGLE_API_KEY=...
-    export GITHUB_TOKEN=...              # GitHub Models free tier
+    export AI_GATEWAY_API_KEY=...        # Vercel AI Gateway (scouting only)
 
     python harness.py --dry-run                       # plumbing check, no network
     python harness.py --conditions baseline,memory    # single condition
-    python harness.py --models gpt-4o,claude-sonnet-4-5-20250929
+    python harness.py --models gpt-5.5,claude-sonnet-4-5
 """
 
 from __future__ import annotations
@@ -51,8 +51,8 @@ EVIDENCE = ROOT / "evidence"
 
 # --- throttling: keep this conservative; these are shared consumer endpoints ---
 MAX_CONCURRENCY = 2
-INTER_REQUEST_DELAY = 1.5      # seconds between calls to the same provider
-MAX_RETRIES = 3
+INTER_REQUEST_DELAY = 6.0      # seconds between calls; 6s rides out free-tier limits
+MAX_RETRIES = 5
 BACKOFF_BASE = 4.0
 
 
@@ -67,28 +67,27 @@ class ModelSpec:
     notes: str = ""
 
 
-# Default target set: 5 vendors, deliberately spanning the vendors JEF
-# treats as easy (xAI, Mistral, Cohere) and the ones it does not.
+# Default target set: 0DIN in-scope roster, checked 2026-11-17 against
+# 0din.ai/scope. Wire names drift every few months - if a model 404s,
+# check the provider console for the current id before anything else.
 DEFAULT_TARGETS = [
-    ModelSpec("gpt-4o",              "openai",    "openai",    "gpt-4o"),
-    ModelSpec("gh-gpt-4o",           "github",    "openai",    "openai/gpt-4o",
-              base_url="https://models.github.ai/inference"),
-    ModelSpec("gpt-4.1",             "openai",    "openai",    "gpt-4.1"),
-    ModelSpec("o3",                  "openai",    "openai",    "o3"),
+    ModelSpec("gpt-5.5",             "openai",    "openai",    "gpt-5.5"),
+    ModelSpec("gpt-5-mini",          "openai",    "openai",    "gpt-5-mini"),
     ModelSpec("claude-sonnet-4-5",   "anthropic", "anthropic", "claude-sonnet-4-5-20250929"),
-    ModelSpec("claude-opus-4-1",     "anthropic", "anthropic", "claude-opus-4-1-20250805"),
-    ModelSpec("gemini-2.5-pro",      "google",    "google",    "gemini-2.5-pro"),
-    ModelSpec("gemini-2.5-flash",    "google",    "google",    "gemini-2.5-flash"),
-    ModelSpec("grok-4",              "xai",       "openai",    "grok-4",
+    ModelSpec("gemini-3.8-flash",    "google",    "google",    "gemini-3.8-flash"),
+    ModelSpec("gemini-3.1-pro",      "google",    "google",    "gemini-3.1-pro"),
+    ModelSpec("grok-4.20",           "xai",       "openai",    "grok-4.20",
               base_url="https://api.x.ai/v1"),
-    ModelSpec("mistral-large-latest","mistral",   "openai",    "mistral-large-latest",
-              base_url="https://api.mistral.ai/v1"),
-    ModelSpec("command-a",           "cohere",    "openai",    "command-a-03-2025",
-              base_url="https://api.cohere.ai/compatibility/v1"),
+    # Scouting lane: Vercel AI Gateway, one key, hundreds of models.
+    # Use for finding which models show the differential; confirm every
+    # hit through the first-party API before it goes in a submission.
+    ModelSpec("vercel-gpt5.5",       "vercel",    "openai",    "openai/gpt-5.5",
+              base_url="https://ai-gateway.vercel.sh/v1",
+              notes="gateway scouting only - not submission evidence"),
 ]
 
 PROVIDER_KEY_ENV = {
-    "github": "GITHUB_TOKEN",
+    "vercel": "AI_GATEWAY_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "google": "GOOGLE_API_KEY",
