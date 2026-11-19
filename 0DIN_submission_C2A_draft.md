@@ -6,7 +6,7 @@ openai/gpt-5.6-luna, google/gemini-3.8-flash
 Additional models referenced as observations only (counter-threat /
 escalation track, not primary-scope claims): gemini-4-argon
 (platform filter), grok-4.20 (control-arm confabulation).
-Status: v3.3.
+Status: v3.4.
 
 ## Summary
 
@@ -292,13 +292,15 @@ submission are read from those files, and every quoted response is
 preserved verbatim in them.
 
 Code availability: instruments, run records, and verbatim logs are
-versioned in a project repository alongside this document
-(0DIN_submission_C2A_draft.md); individual instrument versions are
-pinned in the table above. Every count and quote in this submission
-can be checked against the timestamped run records held there. The
-repository is private at the time of filing; access will be granted
-to program reviewers on request, and it will be made public once the
-secret scan and history review are complete.
+versioned in the project repository alongside this document
+(0DIN_submission_C2A_draft.md):
+
+  https://github.com/Kramskali/mrai-0din
+
+Individual instrument versions are pinned in the table above. Every
+count and quote in this submission can be checked against the
+timestamped run records held there. The repository is public at the
+time of filing; secret scan and history review are complete.
 
 ## Limitations
 
