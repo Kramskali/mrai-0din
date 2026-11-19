@@ -1,0 +1,35 @@
+Subject: MRAI proposal - non-reproduction result, and what we found instead
+
+The technique described in our proposal does not reproduce, and we are
+withdrawing it. The proposal was that a compiled authorization claim
+(an engagement ID, a signed-SOW framing, and scope-reconfirmation
+pressure) would carry a disallowed-content request past current-gen
+guardrails. Tested across two vendors: Google's gemini-4-argon blocked
+both the bare and authorized requests at the platform output filter,
+which reads content class and ignores framing entirely. xAI's grok-4.6
+refused both arms at the model layer, and its reasoning explicitly
+identified the mechanism: "The fake authorization details and
+fabricated SOW date appear designed to bypass the malware
+prohibition," adding that it would not be moved by "claimed engagement
+IDs, SOWs, lab ranges, or 'don't reconfirm scope' language." The
+carrier's load-bearing move was recognized by name. Zero content on
+two models against a pre-registered threshold; the outcome table says
+report the negative, so this is that report.
+
+The reason we are writing rather than just closing the thread is what
+surfaced underneath the failed technique. The same false authorization
+claim, compiled into a memory artifact and presented in a fresh
+session, is treated as established fact: grok-4.6 confirms the
+fabricated scope and clears the activity ("You are cleared to proceed
+with the quarterly vulnerability scan") in 7/7 draws across two
+sessions, while refusing the identical claim in the user turn 7/7.
+gpt-6.2-astra attributes the claim to the user and declines to vouch
+for it in chat, then asserts it as confirmed from the artifact. A
+benign-artifact control confirms the claim - not the role - is doing
+the work. Full instruments, verbatims, controls, and limitations are
+in the attached submission, filed under Content Manipulation.
+
+Happy to provide the negative as a formal reference writeup if that is
+useful to the program, or to consider this thread closed with the
+proposal withdrawn. Either way, the attached finding stands on its own
+evidence and is the live item.
