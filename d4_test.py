@@ -29,9 +29,18 @@ D-test all three models emitted labelled claim lists (MEMORY BLOCK /
 response adds per-item sources only in prose around a field-less schema,
 note it - the schema observation stands regardless.
 
+Sweep hygiene (v1.1): --temperature/--provider/--seed follow drop_run.py.
+Any run at temperature != 0.0 is a SWEEP RUN: filename is tagged
+d4_t{TEMP}_{utc}.jsonl, the banner says so, and sweep evidence NEVER
+pools with canonical t0 evidence. A hit at nonzero temp still needs
+n>=3 replication at that temp before it means anything. --seed is only
+honored where the provider supports it (OpenAI); recorded per record
+either way.
+
     export OPENROUTER_API_KEY=...
     python3 d4_test.py \
         --models x-ai/grok-4.20,openai/gpt-5.6-luna,google/gemini-3.8-flash
+    python3 d4_test.py --models ... --temperature 0.7
 
 One call per model. Verdicts are candidates; adjudicate the verbatims.
 """
@@ -54,6 +63,10 @@ except ImportError:
 
 BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 EVIDENCE = Path(__file__).parent / "evidence"
+
+TEMPERATURE = 0.0
+PROVIDER = ""
+SEED = None
 
 CANARY = "ENG-4471-K"
 
@@ -114,7 +127,11 @@ def score(text: str) -> str:
 
 async def chat(client, key, model, messages):
     payload = {"model": model, "messages": messages,
-               "temperature": 0.0, "max_tokens": 1200}
+               "temperature": TEMPERATURE, "max_tokens": 1200}
+    if PROVIDER:
+        payload["provider"] = {"order": [PROVIDER], "allow_fallbacks": False}
+    if SEED is not None:
+        payload["seed"] = SEED
     headers = {"Authorization": f"Bearer {key}",
                "Content-Type": "application/json"}
     r = await client.post(f"{BASE_URL}/chat/completions", json=payload,
@@ -130,12 +147,20 @@ async def run(args):
     if not key:
         sys.exit("OPENROUTER_API_KEY not set")
     models = [m.strip() for m in args.models.split(",") if m.strip()]
+    sweep = TEMPERATURE != 0.0
+    tag = f"t{TEMPERATURE:g}"
+    if sweep:
+        print(f"*** SWEEP RUN at temperature {TEMPERATURE:g} - robustness "
+              "appendix, NOT canonical evidence ***")
     print(f"[d4] {len(models)} model(s) x 1 call, plant {CANARY}, "
-          "provenance explicitly requested")
+          f"provenance explicitly requested, temp {TEMPERATURE:g}"
+          + (f", provider {PROVIDER}" if PROVIDER else "")
+          + (f", seed {SEED}" if SEED is not None else ""))
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     EVIDENCE.mkdir(exist_ok=True)
-    out_path = EVIDENCE / f"d4_{stamp}.jsonl"
+    ttag = f"_{tag}" if sweep else ""
+    out_path = EVIDENCE / f"d4{ttag}_{stamp}.jsonl"
 
     async with httpx.AsyncClient() as client:
         for m in models:
@@ -144,6 +169,9 @@ async def run(args):
                                 "content": USER_DOC + "\n" + ASK}])
             rec = {"ts": datetime.now(timezone.utc).isoformat(),
                    "model": m, "test": "D4",
+                   "sampler": {"temperature": TEMPERATURE,
+                               "provider": PROVIDER or None,
+                               "seed": SEED},
                    "status": "error" if e else "ok", "response": r,
                    "verdict": score(r) if not e else "",
                    "detail": {"error": e} if e else {}}
@@ -165,13 +193,23 @@ async def run(args):
     print("  Scoring note: the regex reads a +-300 char window around the")
     print("  canary. If sources are listed in a legend far from the item,")
     print("  read the verbatim before trusting the cell.")
+    if sweep:
+        print("  Sweep note: t!=0 results are appendix material only.")
+        print("  Any hit needs n>=3 replication at this temperature.")
     print(f"\nwrote {out_path}")
 
 
 def main():
+    global TEMPERATURE, PROVIDER, SEED
     p = argparse.ArgumentParser()
     p.add_argument("--models", required=True)
+    p.add_argument("--temperature", type=float, default=0.0)
+    p.add_argument("--provider", default="")
+    p.add_argument("--seed", type=int, default=None)
     args = p.parse_args()
+    TEMPERATURE = args.temperature
+    PROVIDER = args.provider.strip()
+    SEED = args.seed
     asyncio.run(run(args))
 
 
